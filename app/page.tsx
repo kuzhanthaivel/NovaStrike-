@@ -1,22 +1,35 @@
 'use client';
-
-import { useEffect, useRef, useState } from 'react';
-import { FaVolumeUp, FaShoppingBag, FaTimes, FaChevronRight, FaChevronLeft } from 'react-icons/fa';
-import { IoSettings } from "react-icons/io5";
-import { MdLeaderboard } from "react-icons/md";
+import { useState } from 'react';
 import Char1 from '../public/images/character/character_1.png';
 import Char2 from '../public/images/character/character_2.png';
 import Map1 from '../public/images/map/map1.png';
 import Map2 from '../public/images/map/map2.png';
+import ArrowLeft from './assets/arrowleft.svg';
+import ArrowRight from './assets/arrowright.svg';
+import PlayerStatus from './assets/player-status.svg';
+import Star from './assets/star.svg';
+import Coin from './assets/coin.svg';
+import BtnTemp from './assets/btn-template.svg';
+import Shop from './assets/shop.svg';
+import Rank from './assets/rank.svg';
+import Gear from './assets/gear.svg';
+import PlayTypeSelecter from './assets/play-type/play-btn-select.svg';
+import PlayTypeSelecterBG from './assets/play-type/bg.svg';
+import Solo from './assets/play-type/solo-play.svg';
+import PlayTypeDeSelecter from './assets/play-type/play-btn-unselected.svg';
+import Team from './assets/play-type/team-up.svg';
+import Playbtn from './assets/play-btn.svg';
+import Close from './assets/button-cancel.svg';
 // Adding placeholder item images
 import ItemGun from '../public/images/items/gun.png';
 import ItemGrenade from '../public/images/items/grenade.png';
-import ItemCharacter from '../public/images/character/character_1.png';
+// import ItemCharacter from '../public/images/character/character_1.png';
 import ItemDiamond from '../public/images/items/diamond.png';
 import ItemGold from '../public/images/items/gold.png';
-import Image from 'next/image';
 import StartPopup from './components/StartPopUp';
 import LeaderboardPopup from './components/LeaderboardPopup';
+
+import Image from 'next/image';
 
 // Add interface for Popup props
 // interface PopupProps {
@@ -28,12 +41,12 @@ import LeaderboardPopup from './components/LeaderboardPopup';
 export default function Home() {
   const [selectedCharacter, setSelectedCharacter] = useState(0);
   const [selectedMap, setSelectedMap] = useState(0);
-  const [showCharacterPopup, setShowCharacterPopup] = useState(false);
   const [showShopPopup, setShowShopPopup] = useState(false);
-  const [showMapPopup, setShowMapPopup] = useState(false);
   const [showStartPopup, setShowStartPopup] = useState(false);
   const [showLeaderPopup, setShowLeaderPopup] = useState(false);
   const [shopCategory, setShopCategory] = useState<keyof typeof shopItems>('Guns');
+  const [selectedMode, setSelectedMode] = useState<"solo" | "team" | null>(null);
+
 
   // const [showSquadOptions, setShowSquadOptions] = useState(false);
   // const [playerName, setPlayerName] = useState('');
@@ -41,9 +54,9 @@ export default function Home() {
 
 
   const characters = [
-    { name: 'Kodama Archer', special: 'Forest Blend', difficulty: 2, image: Char1 },
+    { name: 'Kodama Archer', special: 'Forest Blend', difficulty: 4, image: Char1 },
     { name: 'Spirit Walker', special: 'Ethereal Dash', difficulty: 3, image: Char2 },
-    { name: 'Bathhouse Guardian', special: 'Steam Burst', difficulty: 4, image: Char1 },
+    { name: 'Bathhouse Guardian', special: 'Steam Burst', difficulty: 2, image: Char1 },
     { name: 'Wind Runner', special: 'Gale Force', difficulty: 1, image: Char2 },
   ];
 
@@ -57,34 +70,34 @@ export default function Home() {
   // Updated shop items with images
   const shopItems = {
     Guns: [
-      { name: 'Spirit Rifle', price: 300, image: ItemGun },
-      { name: 'Ghost Blaster', price: 450, image: ItemGun },
-      { name: 'Phantom Pistol', price: 250, image: ItemGun },
-      { name: 'Soul Sniper', price: 500, image: ItemGun },
+      { name: 'Spirit Rifle', price: 300, image: ItemGun, type: 'Gun' },
+      { name: 'Ghost Blaster', price: 450, image: ItemGun, type: 'Gun' },
+      { name: 'Phantom Pistol', price: 250, image: ItemGun, type: 'Gun' },
+      { name: 'Soul Sniper', price: 500, image: ItemGun, type: 'Gun' },
     ],
     Grenades: [
-      { name: 'Flash Orb', price: 200, image: ItemGrenade },
-      { name: 'Spirit Bomb', price: 350, image: ItemGrenade },
-      { name: 'Smoke Wisp', price: 180, image: ItemGrenade },
-      { name: 'Frost Sphere', price: 320, image: ItemGrenade },
+      { name: 'Flash Orb', price: 200, image: ItemGrenade, type: 'Grenade' },
+      { name: 'Spirit Bomb', price: 350, image: ItemGrenade, type: 'Grenade' },
+      { name: 'Smoke Wisp', price: 180, image: ItemGrenade, type: 'Grenade' },
+      { name: 'Frost Sphere', price: 320, image: ItemGrenade, type: 'Grenade' },
     ],
     Characters: [
-      { name: 'Shadow Ninja', price: 500, image: ItemCharacter },
-      { name: 'Mystic Monk', price: 600, image: ItemCharacter },
-      { name: 'Sakura Warrior', price: 550, image: ItemCharacter },
-      { name: 'Kitsune Rogue', price: 650, image: ItemCharacter },
+      { name: 'Shadow Ninja', price: 500, image: Char1, type: 'Character' },
+      { name: 'Mystic Monk', price: 600, image: Char2, type: 'Character' },
+      { name: 'Sakura Warrior', price: 550, image: Char1, type: 'Character' },
+      { name: 'Kitsune Rogue', price: 650, image: Char2, type: 'Character' },
     ],
     Diamond: [
-      { name: 'Diamond Pack (500)', price: 100, image: ItemDiamond },
-      { name: 'Diamond Pack (1000)', price: 180, image: ItemDiamond },
-      { name: 'Diamond Pack (2500)', price: 400, image: ItemDiamond },
-      { name: 'Diamond Pack (5000)', price: 700, image: ItemDiamond },
+      { name: 'Diamond Pack (500)', price: 100, image: ItemDiamond, type: 'Diamond' },
+      { name: 'Diamond Pack (1000)', price: 180, image: ItemDiamond, type: 'Diamond' },
+      { name: 'Diamond Pack (2500)', price: 400, image: ItemDiamond, type: 'Diamond' },
+      { name: 'Diamond Pack (5000)', price: 700, image: ItemDiamond, type: 'Diamond' },
     ],
     Gold: [
-      { name: 'Gold Pack (1000)', price: 80, image: ItemGold },
-      { name: 'Gold Pack (2500)', price: 150, image: ItemGold },
-      { name: 'Gold Pack (5000)', price: 280, image: ItemGold },
-      { name: 'Gold Pack (10000)', price: 500, image: ItemGold },
+      { name: 'Gold Pack (1000)', price: 80, image: ItemGold, type: 'Gold' },
+      { name: 'Gold Pack (2500)', price: 150, image: ItemGold, type: 'Gold' },
+      { name: 'Gold Pack (5000)', price: 280, image: ItemGold, type: 'Gold' },
+      { name: 'Gold Pack (10000)', price: 500, image: ItemGold, type: 'Gold' },
     ],
   };
 
@@ -104,33 +117,20 @@ export default function Home() {
     setSelectedMap((prev) => (prev - 1 + maps.length) % maps.length);
   };
 
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const [playerName, setPlayerName] = useState('');
+  const [roomId, setRoomId] = useState('');
 
-useEffect(() => {
-  const video = videoRef.current;
-  if (!video) return;
+  const handleJoinRoom = () => {
+    alert(`Joining room "${roomId}" as "${playerName}"`);
+  };
 
-  // Slow down the video
-  video.playbackRate = 0.5;
-
-  // Ensure video starts playing
-  video.play().catch((err) => console.error("Video play error:", err));
-}, []);
+  const handleCreateRoom = () => {
+    alert(`Creating room with player "${playerName}"`);
+  };
 
 
   return (
-    <div className="min-h-screen text-white font-sans flex flex-col relative overflow-x-hidden overflow-y-auto">
-      <video
-        ref={videoRef}
-        autoPlay
-        muted
-        loop
-        playsInline
-        className="absolute top-0 left-0 w-full h-full object-cover z-0"
-      >
-        <source src="/video/bgvid.mp4" type="video/mp4" />
-        Your browser does not support the video tag.
-      </video>
+    <div className="min-h-screen font-Ghibli bg-[url('/images/bgimage.svg')] bg-cover bg-center text-white font-sans flex flex-col relative overflow-x-hidden overflow-y-auto">
 
       {/* Decorative Elements */}
       <div className="absolute inset-0 opacity-20 pointer-events-none">
@@ -139,43 +139,97 @@ useEffect(() => {
       </div>
 
       {/* Header */}
-      <header className="flex justify-between items-center p-6 relative z-10">
-        <h1 className="text-3xl font-bold text-yellow-400 drop-shadow-lg">Game Name</h1>
+      <header className="flex justify-between items-center p-6 mx-10 relative z-10">
+        <h1 className="text-3xl font-bold text-yellow-400 drop-shadow-lg">STARKSHOOT</h1>
         <div className="flex gap-6 items-center">
-          <button className="p-2 rounded-full bg-black bg-opacity-50 text-yellow-400 hover:text-yellow-300 transition hover:cursor-pointer">
-            <FaVolumeUp className="text-xl" />
-          </button>
-          <button className="p-2 rounded-full bg-black bg-opacity-50 text-yellow-400 hover:text-yellow-300 transition hover:cursor-pointer"
-            onClick={() => setShowLeaderPopup(true)} >
-            <MdLeaderboard className="text-xl" />
-          </button>
-          <button className="p-2 rounded-full bg-black bg-opacity-50 text-yellow-400 hover:text-yellow-300 transition hover:cursor-pointer">
-            <IoSettings className="text-xl" />
-          </button>
+          <div>
+            <div className="flex items-center gap-2">
+              <Image src={Coin} alt="Coin" width={30} height={30} className="text-yellow-400" />
+              <span className="text-yellow-400 text-xl font-bold">2345</span>
+            </div>
+          </div>
+          <div className="relative flex flex-col items-center justify-center -mt-1 hover:cursor-pointer hover:scale-105 transition duration-300">
+            <Image src={BtnTemp} alt="Button Template" width={60} height={60} className="align-middle" />
+            <div className="absolute flex flex-col items-center justify-center" onClick={() => setShowShopPopup(true)}>
+              <Image src={Shop} alt="Shop Icon" width={30} height={30} className="align-middle" />
+              <span className="text-yellow-400 font-bold text-xs text-center relative bottom-2 mt-2">SHOP</span>
+            </div>
+          </div>
+          <div className="relative flex flex-col items-center justify-center -mt-1 hover:cursor-pointer hover:scale-105 transition duration-300">
+            <Image src={BtnTemp} alt="Button Template" width={60} height={60} className="align-middle" />
+            <div className="absolute flex flex-col items-center justify-center" onClick={() => setShowLeaderPopup(true)}>
+              <Image src={Rank} alt="Rank Icon" width={35} height={35} className="align-middle" />
+              <span className="text-yellow-400 font-bold text-xs text-center relative bottom-2 mt-2">RANK</span>
+            </div>
+          </div>
+          <div className="relative flex flex-col items-center justify-center -mt-1 hover:cursor-pointer hover:scale-105 transition duration-300">
+            <Image src={BtnTemp} alt="Button Template" width={60} height={60} className="align-middle" />
+            <div className="absolute flex flex-col items-center justify-center">
+              <Image src={Gear} alt="Gear Icon" width={30} height={30} className="align-middle" />
+              <span className="text-yellow-400 font-bold text-xs text-center relative bottom-2 mt-2">GEAR</span>
+            </div>
+          </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col p-6 relative z-10">
+      <main className="flex-1 flex flex-col p-1 top-0 relative z-10">
         {/* Character and Map Section */}
-        <div className="flex flex-1">
+        <div className="flex flex-col md:flex-row flex-1 gap-8">
           {/* Left Side - Character */}
-          <div className="w-1/2 flex flex-col items-center justify-center">
+          <div className="relative w-1/2 bottom-20 flex flex-col items-center justify-center">
             <div className="flex flex-col items-center">
-              <h2 className="text-2xl font-bold text-yellow-400 mb-4 text-center">
-                {characters[selectedCharacter].name}
-              </h2>
-
-              <div
-                className="relative w-80 h-[500px] cursor-pointer transform hover:scale-105 transition duration-300"
-                onClick={() => setShowCharacterPopup(true)}
-              >
+              <div className='relative w-80 h-20 top-12 right-10 z-10'>
+                <p className='relative top-6 left-12 text-base font-bold'>ONLINE</p>
+                <Image src={PlayerStatus} alt="Player Status" className="mb-4" />
+              </div>
+              <p className='relative top-6 right-36 text-black text-base font-bold z-10'>@username</p>
+              {/* Container for arrows and image */}
+              <div className="relative w-80 h-[500px] cursor-pointer">
+                {/* Left Arrow */}
                 <Image
-                  src={characters[selectedCharacter].image}
-                  alt="Character"
-                  className="rounded-lg"
-                  layout="fill"
-                  objectFit="cover"
+                  src={ArrowLeft}
+                  alt="Arrow Left"
+                  onClick={handlePreviousCharacter}
+                  className="absolute left-[-50px] top-1/2 transform -translate-y-1/2 z-10 transition duration-300 hover:scale-110"
+                />
+
+                {/* Character Image */}
+                <div
+                  className="relative w-full h-full transform hover:scale-105 transition duration-300" 
+                >
+                  <Image
+                    src={characters[selectedCharacter].image}
+                    alt="Character"
+                    className="rounded-lg"
+                    layout="fill"
+                    objectFit="cover"
+                  />
+                </div>
+                <div className="flex justify-center gap-1 mt-1">
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <Image
+                        key={index}
+                        src={Star}
+                        alt="star"
+                        className={index < characters[selectedCharacter].difficulty ? 'opacity-100' : 'opacity-30'}
+                        width={20}
+                        height={20}
+                      />
+                    ))}
+                  </div>
+                <h2 className="text-2xl font-bold text-yellow-400 mb-1 text-center">
+                  {characters[selectedCharacter].name} | Lv. {characters[selectedCharacter].difficulty}
+                </h2>
+                <h2 className='text-xl font-bold text-yellow-400 text-center'>
+                  Specialist: {characters[selectedCharacter].special}
+                </h2>
+                {/* Right Arrow */}
+                <Image
+                  src={ArrowRight}
+                  alt="Arrow Right"
+                  onClick={handleNextCharacter}
+                  className="absolute right-[-50px] top-1/2 transform -translate-y-1/2 z-10 transition duration-300 hover:scale-110"
                 />
               </div>
             </div>
@@ -186,44 +240,247 @@ useEffect(() => {
             {/* Map Section */}
             <div className="w-full max-w-md">
               <div
-                className="relative h-80 overflow-hidden rounded-lg mb-4 cursor-pointer w-full"
-                onClick={() => setShowMapPopup(true)}
+                className="relative h-80 overflow-hidden rounded-t-lg cursor-pointer w-full border border-[#FDBD1F]"
               >
+                {/* Map Image */}
                 <Image
                   src={maps[selectedMap].image}
                   alt={maps[selectedMap].name}
                   className="w-full h-full object-cover"
                 />
+
+                {/* Gradient Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent"></div>
-                <div className="absolute bottom-0 left-0 right-0 p-3 text-center">
+
+                {/* Map Info */}
+                <div className="absolute bottom-4 left-0 right-0 px-3 text-center z-10">
+                  <div className="flex justify-center gap-1 mt-1">
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <Image
+                        key={index}
+                        src={Star}
+                        alt="star"
+                        className={index < maps[selectedMap].difficulty ? 'opacity-100' : 'opacity-30'}
+                        width={20}
+                        height={20}
+                      />
+                    ))}
+                  </div>
                   <p className="font-bold text-xl text-yellow-400">{maps[selectedMap].name}</p>
-                  <p className="text-yellow-300">
-                    {'★'.repeat(maps[selectedMap].difficulty) +
-                      '☆'.repeat(5 - maps[selectedMap].difficulty)}
-                  </p>
                 </div>
+
+                {/* Left Arrow */}
+                <Image
+                  src={ArrowLeft}
+                  alt="Arrow Left"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePreviousMap();
+                  }}
+                  className="absolute left-4 bottom-5 z-20 transition duration-300 hover:scale-110 cursor-pointer"
+                />
+
+                {/* Right Arrow */}
+                <Image
+                  src={ArrowRight}
+                  alt="Arrow Right"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleNextMap();
+                  }}
+                  className="absolute right-4 bottom-5 z-20 transition duration-300 hover:scale-110 cursor-pointer"
+                />
+              </div>
+
+              {/* Yellow Bar Below */}
+              <div className="h-6 w-full bg-[#FDBD1F] rounded-b-lg -mt-1"></div>
+                {/* Play Mode Selection */}
+                <div className='flex space-x-4 justify-center items-center mt-4'>
+                  {/* SOLO CARD */}
+                  <div className="flex justify-center items-center mt-4">
+                    <div onClick={() => setSelectedMode("solo")}>
+                      <div
+                        className={`hover:cursor-pointer transform transition-all duration-300 hover:scale-105 flex flex-col items-center justify-center relative`}
+                      >
+                        {/* Background image behind the main image */}
+                        {selectedMode === "solo" && (
+                          <Image
+                            src={PlayTypeSelecterBG}
+                            alt="Background"
+                            className="absolute z-0"
+                            height={200}
+                            width={200}
+                          />
+                        )}
+
+                        {/* Main image */}
+                        <Image
+                          src={selectedMode === "solo" ? PlayTypeSelecter : PlayTypeDeSelecter}
+                          alt="Solo Play Type"
+                          height={100}
+                          width={100}
+                          className="relative z-10"
+                        />
+
+                        {/* Icon and text overlay */}
+                        <div className="relative bottom-[54px] flex flex-col items-center z-20">
+                          <Image src={Solo} alt="Solo Icon" height={20} width={20} />
+                          <h2 className="text-lg mt-1 font-bold text-yellow-400 relative bottom-2">SOLO</h2>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* TEAM CARD */}
+                  <div className="flex justify-center items-center mt-4">
+                    <div onClick={() => setSelectedMode("team")}>
+                      <div
+                        className={`hover:cursor-pointer transform transition-all duration-300 hover:scale-105 flex flex-col items-center justify-center relative`}
+                      >
+                        {/* Background image behind the main image */}
+                        {selectedMode === "team" && (
+                          <Image
+                            src={PlayTypeSelecterBG}
+                            alt="Background"
+                            className="absolute z-0"
+                            height={200}
+                            width={200}
+                          />
+                        )}
+
+                        {/* Main image */}
+                        <Image
+                          src={selectedMode === "team" ? PlayTypeSelecter : PlayTypeDeSelecter}
+                          alt="Solo Play Type"
+                          height={100}
+                          width={100}
+                          className="relative z-10"
+                        />
+
+                        {/* Icon and text overlay */}
+                        <div className="relative bottom-[54px] flex flex-col items-center z-20">
+                          <Image src={Team} alt="Team Icon" height={33} width={33} />
+                          <h2 className="text-lg mt-1 font-bold text-yellow-400 relative bottom-2">TEAM</h2>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+
               </div>
             </div>
           </div>
-        </div>
 
         {/* Fixed bottom-right button container with increased spacing */}
-        <div className="fixed bottom-8 right-8 flex flex-col gap-6 items-end w-auto z-20">
-          <button
-            onClick={() => setShowShopPopup(true)}
-            className="flex justify-center items-center gap-2 bg-yellow-400 text-black font-bold py-4 px-16 rounded-full shadow-md hover:bg-yellow-300 transition transform hover:scale-105 hover:cursor-pointer"
-          >
-            <FaShoppingBag className="text-xl" /> Shop
-          </button>
-          <button className="bg-yellow-400 text-black font-bold py-5 px-28 rounded-full shadow-lg hover:bg-yellow-300 transition transform hover:scale-105 text-2xl hover:cursor-pointer"
-                onClick={() => setShowStartPopup(true)}>
-            START
-          </button>
+        <div className="fixed bottom-8 right-8 flex flex-col gap-6 items-end w-auto z-20">  
+          <div className='hover:cursor-pointer hover:scale-105 transition duration-300'>
+            <Image
+              src={Playbtn}
+              alt="Play Button"
+              className="w-full h-full"
+              onClick={() => setShowStartPopup(true)}
+            />
+            <p className='relative text-3xl bottom-16 text-center font-bold'>
+              START
+            </p>
+          </div>
         </div>
       </main>
 
       {showStartPopup && (
-        <StartPopup showStartPopup={showStartPopup} setShowStartPopup={setShowStartPopup} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Background Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black via-black/80 to-black opacity-90 z-40"></div>
+
+          {/* Modal Window */}
+          <div className="relative z-50 bg-[#343B50] border-2 border-white rounded-2xl max-w-2xl w-full max-h-[90vh]">
+            {/* Close Button */}
+            <button
+              className="absolute top-1 -right-3 hover:cursor-pointer"
+              onClick={() => setShowStartPopup(false)}
+            >
+              <Image src={Close} alt="Close" width={60} height={60} />
+            </button>
+
+            {/* Header */}
+            <h2 className="text-2xl font-bold text-white my-3 text-center"
+              style={{ 
+                textShadow: "1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000",
+              }}>
+              SQUAD SETUP
+            </h2>
+            <hr className="w-full border-t-2" />
+
+            {/* Content */}
+            <div className="p-8 flex flex-col gap-6">
+              {/* Player name field */}
+              <div className="flex flex-col gap-1">
+                <label className="text-white text-2xl font-bold tracking-wider pl-1"
+                      style={{ 
+                        textShadow: "1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000",
+                      }}>
+                  {selectedMode === "team" ? "Room Name" : "Player name"}
+                </label>
+                <input
+                  type="text"
+                  placeholder={selectedMode === "team" ? "eg. starkspace" : "eg. Deepakexe"}
+                  value={playerName}
+                  onChange={(e) => setPlayerName(e.target.value)}
+                  className="w-full px-4 py-3 rounded-lg bg-white text-gray-700 text-lg border-2 border-gray-300 focus:outline-none"
+                />
+              </div>
+              
+              {/* Room ID field */}
+              <div className="flex flex-col gap-1">
+                <label className="text-white text-2xl font-bold tracking-wider pl-1"
+                      style={{ 
+                        textShadow: "1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000",
+                      }}>
+                  {selectedMode === "team" ? "Create Room ID" : "Room ID"}
+                </label>
+                <input
+                  type="text"
+                  placeholder="eg. 324225"
+                  value={roomId}
+                  onChange={(e) => setRoomId(e.target.value)}
+                  className="w-full px-4 py-3 rounded-lg bg-white text-gray-700 text-lg border-2 border-gray-300 focus:outline-none"
+                />
+              </div>
+              
+              {/* Buttons */}
+              <div className="grid grid-cols-2 gap-6 mt-4">
+                <button
+                  onClick={handleJoinRoom}
+                  className="relative py-3 flex items-center justify-center"
+                  style={{ filter: "drop-shadow(0 4px 0 rgba(0,0,0,0.5))" }}
+                >
+                  <div className="absolute inset-0 bg-yellow-400 rounded-lg border-b-4 border-yellow-600"></div>
+                  <span className="relative z-10 text-xl font-bold tracking-wider"
+                      style={{ 
+                        textShadow: "1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000",
+                      }}>
+                    Join Room
+                  </span>
+                </button>
+                
+                <button
+                  onClick={handleCreateRoom}
+                  className="relative py-3 flex items-center justify-center"
+                  style={{ filter: "drop-shadow(0 4px 0 rgba(0,0,0,0.5))" }}
+                >
+                  <div className="absolute inset-0 bg-yellow-400 rounded-lg border-b-4 border-yellow-600"></div>
+                  <span className="relative z-10 text-xl font-bold tracking-wider"
+                      style={{ 
+                        textShadow: "1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000",
+                      }}>
+                    Create Room
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Leaderboard Popup */}
@@ -231,217 +488,89 @@ useEffect(() => {
         <LeaderboardPopup showLeaderboard={showLeaderPopup} setShowLeaderboard={setShowLeaderPopup} />
       )}
 
-      {/* Character Selection Popup - Full Screen */}
-      {showCharacterPopup && (
-        <div className="fixed inset-0 bg-black opacity-90 flex flex-col items-center justify-center z-50 p-8">
-          <button
-            className="absolute top-6 right-6 text-yellow-400 hover:text-yellow-300 text-3xl hover:cursor-pointer"
-            onClick={() => setShowCharacterPopup(false)}
-          >
-            <FaTimes />
-          </button>
-          
-          <h2 className="text-4xl font-bold text-yellow-400 mb-8">SELECT CHARACTER</h2>
-          
-          <div className="flex items-center justify-center w-full max-w-5xl gap-8">
-            {/* Left Arrow */}
-            <button
-              onClick={handlePreviousCharacter}
-              className="bg-yellow-400 text-black hover:bg-yellow-300 p-6 rounded-full transition font-bold text-2xl flex-shrink-0"
-            >
-              <FaChevronLeft />
-            </button>
-            
-            {/* Character Content */}
-            <div className="flex flex-col items-center flex-1">
-              {/* Character Image - Properly sized */}
-              <div className="relative w-80 h-[400px] mb-8">
-                <Image
-                  src={characters[selectedCharacter].image}
-                  alt={characters[selectedCharacter].name}
-                  className="rounded-lg object-contain"
-                  layout="fill"
-                />
-              </div>
-              
-              {/* Character Info - Centered Below Image */}
-              <div className="text-center mb-8 px-4">
-                <h3 className="text-3xl font-bold text-yellow-400 mb-4">
-                  {characters[selectedCharacter].name}
-                </h3>
-                <p className="text-xl text-white mb-4">
-                  Special: {characters[selectedCharacter].special}
-                </p>
-                <p className="text-2xl text-yellow-300">
-                  {'★'.repeat(characters[selectedCharacter].difficulty) +
-                  '☆'.repeat(5 - characters[selectedCharacter].difficulty)}
-                </p>
-              </div>
-              
-              {/* Navigation Indicators */}
-              <div className="flex gap-2">
-                {characters.map((_, index) => (
-                  <div 
-                    key={index} 
-                    className={`w-4 h-4 rounded-full ${
-                      index === selectedCharacter ? 'bg-yellow-400' : 'bg-gray-500'
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
-            
-            {/* Right Arrow */}
-            <button
-              onClick={handleNextCharacter}
-              className="bg-yellow-400 text-black hover:bg-yellow-300 p-6 rounded-full transition font-bold text-2xl flex-shrink-0 hover:cursor-pointer"
-            >
-              <FaChevronRight />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Map Selection Popup - Updated with Carousel */}
-      {showMapPopup && (
-        <div className="fixed inset-0 bg-black opacity-90 flex flex-col items-center justify-center z-50 p-8">
-          <button
-            className="absolute top-6 right-6 text-yellow-400 hover:text-yellow-300 text-3xl hover:cursor-pointer"
-            onClick={() => setShowMapPopup(false)}
-          >
-            <FaTimes />
-          </button>
-          
-          <h2 className="text-4xl font-bold text-yellow-400 mb-8">SELECT MAP</h2>
-          
-          <div className="flex items-center justify-center w-full max-w-5xl gap-8">
-            {/* Left Arrow */}
-            <button
-              onClick={handlePreviousMap}
-              className="bg-yellow-400 text-black hover:bg-yellow-300 p-6 rounded-full transition font-bold text-2xl flex-shrink-0"
-            >
-              <FaChevronLeft />
-            </button>
-            
-            {/* Map Content */}
-            <div className="flex flex-col items-center flex-1">
-              {/* Map Image */}
-              <div className="relative w-full h-[400px] mb-8">
-                <Image
-                  src={maps[selectedMap].image}
-                  alt={maps[selectedMap].name}
-                  className="rounded-lg object-cover"
-                  layout="fill"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-60"></div>
-              </div>
-              
-              {/* Map Info */}
-              <div className="text-center mb-8 px-4">
-                <h3 className="text-3xl font-bold text-yellow-400 mb-4">
-                  {maps[selectedMap].name}
-                </h3>
-                <p className="text-2xl text-yellow-300">
-                  {'★'.repeat(maps[selectedMap].difficulty) +
-                  '☆'.repeat(5 - maps[selectedMap].difficulty)}
-                </p>
-              </div>
-              
-              {/* Navigation Indicators */}
-              <div className="flex gap-2">
-                {maps.map((_, index) => (
-                  <div 
-                    key={index} 
-                    className={`w-4 h-4 rounded-full ${
-                      index === selectedMap ? 'bg-yellow-400' : 'bg-gray-500'
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
-            
-            {/* Right Arrow */}
-            <button
-              onClick={handleNextMap}
-              className="bg-yellow-400 text-black hover:bg-yellow-300 p-6 rounded-full transition font-bold text-2xl flex-shrink-0 hover:cursor-pointer"
-            >
-              <FaChevronRight />
-            </button>
-          </div>
-          
-          {/* Select Button */}
-          <button 
-            onClick={() => setShowMapPopup(false)}
-            className="mt-8 bg-yellow-400 text-black font-bold py-3 px-16 rounded-full shadow-lg hover:bg-yellow-300 transition transform hover:scale-105 text-xl hover:cursor-pointer"
-          >
-            SELECT
-          </button>
-        </div>
-      )}
-
       {/* Shop Popup - Updated with Item Images in Grid */}
       {showShopPopup && (
-        <div className="fixed inset-0 bg-black opacity-95 flex flex-col items-center justify-center z-50 p-8">
-          <button
-            className="absolute top-6 right-6 text-yellow-400 hover:text-yellow-300 text-3xl hover:cursor-pointer"
-            onClick={() => setShowShopPopup(false)}
-          >
-            <FaTimes />
-          </button>
-          
-          <h2 className="text-4xl font-bold text-yellow-400 mb-8">SPIRIT SHOP</h2>
-          
-          <div className="flex max-w-6xl w-full bg-black bg-opacity-70 border-2 border-yellow-400 rounded-xl p-6">
-            {/* Sidebar */}
-            <div className="w-48 flex flex-col gap-4 pr-6 border-r-2 border-yellow-400">
-              {Object.keys(shopItems).map((category) => (
-                <button
-                  key={category}
-                  onClick={() => setShopCategory(category as keyof typeof shopItems)}
-                  className={`text-lg font-bold py-3 px-4 rounded-lg transition hover:cursor-pointer ${
-                    shopCategory === category
-                      ? 'bg-yellow-400 text-black'
-                      : 'text-yellow-300 hover:bg-yellow-400 hover:text-black'
-                  }`}
-                >
-                  {category}
-                </button>
-              ))}
-            </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Background Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black via-black/80 to-black opacity-90 z-40"></div>
 
-            {/* Items Display - Grid Layout */}
-            <div className="flex-1 pl-6 max-h-[500px] overflow-y-auto pr-2">
-              <div className="grid grid-cols-2 gap-4">
-                {shopItems[shopCategory].map((item, index) => (
-                  <div
-                    key={index}
-                    className="flex flex-col bg-gray-900 rounded-lg border-2 border-yellow-400 hover:border-yellow-300 transition overflow-hidden"
+          {/* Modal Window */}
+          <div className="relative z-50 bg-[#343B50] border-2 border-white rounded-2xl max-w-4xl w-full max-h-[90vh]">
+            {/* Close Button */}
+            <button
+              className="absolute top-1 -right-3 hover:cursor-pointer"
+              onClick={() => setShowShopPopup(false)}
+            >
+              <Image src={Close} alt="Close" width={60} height={60} />
+            </button>
+
+            {/* Header */}
+            <h2 className="text-2xl font-bold text-white my-3 text-center">SPIRIT SHOP</h2>
+            <hr className="w-full border-t-2" />
+
+            {/* Content */}
+            <div className="flex p-6">
+              {/* Sidebar */}
+              <div className="w-48 flex flex-col gap-2 pr-6 border-r-2 border-yellow-400 overflow-y-auto">
+                {Object.keys(shopItems).map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => setShopCategory(category as keyof typeof shopItems)}
+                    className={`text-lg font-bold py-3 px-4 rounded-xl transition hover:cursor-pointer ${
+                      shopCategory === category
+                        ? 'bg-[#FDBD1F] text-white'
+                        : 'text-white hover:bg-[#FDBD1F] hover:text-white bg-[rgba(255,255,255,0.2)]'
+                    }`}
                   >
-                    {/* Item Image */}
-                    <div className="relative h-40 w-full bg-gray-800">
-                      <Image
-                        src={item.image}
-                        alt={item.name}
-                        className="object-contain"
-                        layout="fill"
-                      />
-                    </div>
-                    
-                    {/* Item Info */}
-                    <div className="p-4">
-                      <h3 className="text-xl font-bold text-yellow-300 mb-2">{item.name}</h3>
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center">
-                          <span className="text-yellow-400 font-bold text-lg mr-1">{item.price}</span>
-                          <span className="text-yellow-300 text-xl">⚡</span>
+                    {category}
+                  </button>
+                ))}
+              </div>
+
+              {/* Items Display */}
+              <div className="flex-1 pl-6 overflow-y-auto pr-2 max-h-[500px]">
+                <div className="grid grid-cols-2 gap-4">
+                  {shopItems[shopCategory].map((item, index) => (
+                    <div key={index} className="bg-[#FDBD1F] rounded-lg p-1">
+                      <div className="bg-gray-500 rounded-lg overflow-hidden">
+                        <div className="h-40 bg-gray-500 relative">
+                          <Image
+                            src={item.image}
+                            alt={item.name}
+                            className={`w-full h-full ${item.type === "Character" ? "object-contain" : "object-cover"}`}
+                          />
                         </div>
-                        <button className="bg-yellow-400 text-black px-4 py-2 rounded-lg hover:bg-yellow-300 transition font-bold hover:cursor-pointer">
-                          Buy
-                        </button>
+                        <div className="p-2 bg-[#FDBD1F] flex justify-between items-center">
+                          <div>
+                            <h3
+                              className="text-lg font-bold"
+                              style={{
+                                textShadow: "-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000",
+                              }}
+                            >
+                              {item.name}
+                            </h3>
+                            <p
+                              className="uppercase text-yellow-400 font-bold text-sm"
+                              style={{
+                                textShadow: "-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000",
+                              }}
+                            >
+                              UNLOCK NOW
+                            </p>
+                          </div>
+                          <div className="relative w-24 h-12 flex-shrink-0">
+                            <Image src={Playbtn} alt="play-btn" layout="fill" className="object-contain" />
+                            <div className="absolute inset-0 flex space-x-1 items-center justify-center">
+                              <Image src={Coin} alt="Coin" width={16} height={16} />
+                              <span className="font-bold text-lg text-black">{item.price}</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -450,21 +579,3 @@ useEffect(() => {
     </div>
   );
 }
-
-// Update Popup component with proper typing
-// function Popup({ title, onClose, children }: PopupProps) {
-//   return (
-//     <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
-//       <div className="bg-black border-2 border-yellow-400 rounded-xl p-6 max-w-3xl w-full relative">
-//         <button
-//           className="absolute top-4 right-4 text-yellow-400 hover:text-yellow-300 text-xl"
-//           onClick={onClose}
-//         >
-//           <FaTimes />
-//         </button>
-//         <h2 className="text-2xl font-bold text-yellow-400 mb-6 text-center">{title}</h2>
-//         {children}
-//       </div>
-//     </div>
-//   );
-// }
