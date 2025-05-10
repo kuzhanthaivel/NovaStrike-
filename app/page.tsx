@@ -26,10 +26,11 @@ import ItemGrenade from '../public/images/items/grenade.png';
 // import ItemCharacter from '../public/images/character/character_1.png';
 import ItemDiamond from '../public/images/items/diamond.png';
 import ItemGold from '../public/images/items/gold.png';
-import StartPopup from './components/StartPopUp';
 import LeaderboardPopup from './components/LeaderboardPopup';
 
 import Image from 'next/image';
+import { CustomWallet } from './components/Wallet';
+import SimpleGameFrame from './components/iframe';
 
 // Add interface for Popup props
 // interface PopupProps {
@@ -46,6 +47,7 @@ export default function Home() {
   const [showLeaderPopup, setShowLeaderPopup] = useState(false);
   const [shopCategory, setShopCategory] = useState<keyof typeof shopItems>('Guns');
   const [selectedMode, setSelectedMode] = useState<"solo" | "team" | null>(null);
+  const [showGameFrame, setShowGameFrame] = useState(false);
 
 
   // const [showSquadOptions, setShowSquadOptions] = useState(false);
@@ -120,13 +122,23 @@ export default function Home() {
   const [playerName, setPlayerName] = useState('');
   const [roomId, setRoomId] = useState('');
 
-  const handleJoinRoom = () => {
-    alert(`Joining room "${roomId}" as "${playerName}"`);
+  const handleOpenStartPopup = () => {
+    setShowStartPopup(true);
   };
 
-  const handleCreateRoom = () => {
-    alert(`Creating room with player "${playerName}"`);
+  const handleCloseStartPopup = () => {
+    setShowStartPopup(false);
   };
+
+  const handleStartGame = () => {
+    setShowStartPopup(false);
+    setShowGameFrame(true);
+  };
+  
+  const handleCloseGameFrame = () => {
+    setShowGameFrame(false);
+  };
+  
 
 
   return (
@@ -168,6 +180,9 @@ export default function Home() {
               <Image src={Gear} alt="Gear Icon" width={30} height={30} className="align-middle" />
               <span className="text-yellow-400 font-bold text-xs text-center relative bottom-2 mt-2">GEAR</span>
             </div>
+          </div>
+          <div className="relative z-50">
+            <CustomWallet />
           </div>
         </div>
       </header>
@@ -374,12 +389,13 @@ export default function Home() {
 
         {/* Fixed bottom-right button container with increased spacing */}
         <div className="fixed bottom-8 right-8 flex flex-col gap-6 items-end w-auto z-20">  
-          <div className='hover:cursor-pointer hover:scale-105 transition duration-300'>
+          <div className='hover:cursor-pointer hover:scale-105 transition duration-300'
+            onClick={handleOpenStartPopup}
+            >
             <Image
               src={Playbtn}
               alt="Play Button"
               className="w-full h-full"
-              onClick={() => setShowStartPopup(true)}
             />
             <p className='relative text-3xl bottom-16 text-center font-bold'>
               START
@@ -398,7 +414,7 @@ export default function Home() {
             {/* Close Button */}
             <button
               className="absolute top-1 -right-3 hover:cursor-pointer"
-              onClick={() => setShowStartPopup(false)}
+              onClick={handleCloseStartPopup}
             >
               <Image src={Close} alt="Close" width={60} height={60} />
             </button>
@@ -451,7 +467,7 @@ export default function Home() {
               {/* Buttons */}
               <div className="grid grid-cols-2 gap-6 mt-4">
                 <button
-                  onClick={handleJoinRoom}
+                  onClick={handleStartGame}
                   className="relative py-3 flex items-center justify-center"
                   style={{ filter: "drop-shadow(0 4px 0 rgba(0,0,0,0.5))" }}
                 >
@@ -465,7 +481,7 @@ export default function Home() {
                 </button>
                 
                 <button
-                  onClick={handleCreateRoom}
+                  onClick={handleStartGame}
                   className="relative py-3 flex items-center justify-center"
                   style={{ filter: "drop-shadow(0 4px 0 rgba(0,0,0,0.5))" }}
                 >
@@ -486,6 +502,10 @@ export default function Home() {
       {/* Leaderboard Popup */}
       {showLeaderPopup && (
         <LeaderboardPopup showLeaderboard={showLeaderPopup} setShowLeaderboard={setShowLeaderPopup} />
+      )}
+
+      {showGameFrame && (
+        <SimpleGameFrame onClose={handleCloseGameFrame} />
       )}
 
       {/* Shop Popup - Updated with Item Images in Grid */}
