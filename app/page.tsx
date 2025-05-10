@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Char1 from '../public/images/character/character_1.png';
 import Char2 from '../public/images/character/character_2.png';
 import Map1 from '../public/images/map/map1.png';
@@ -27,10 +27,13 @@ import ItemGrenade from '../public/images/items/grenade.png';
 import ItemDiamond from '../public/images/items/diamond.png';
 import ItemGold from '../public/images/items/gold.png';
 import LeaderboardPopup from './components/LeaderboardPopup';
+import { FaAward } from "react-icons/fa6";
 
 import Image from 'next/image';
 import { CustomWallet } from './components/Wallet';
 import SimpleGameFrame from './components/iframe';
+import { CLAIM_REWARDS, FETCHESTK_BALANCE, GET_STAKE_INFO, STAKE_STARKSHOOT } from '@/contract/integration/integration';
+import { useAccount } from 'wagmi';
 
 // Add interface for Popup props
 // interface PopupProps {
@@ -45,9 +48,21 @@ export default function Home() {
   const [showShopPopup, setShowShopPopup] = useState(false);
   const [showStartPopup, setShowStartPopup] = useState(false);
   const [showLeaderPopup, setShowLeaderPopup] = useState(false);
+  const [showStakePopup, setShowStakePopup] = useState(false);
+  const [showClaimPopup, setShowClaimPopup] = useState(false);
   const [shopCategory, setShopCategory] = useState<keyof typeof shopItems>('Guns');
   const [selectedMode, setSelectedMode] = useState<"solo" | "team" | null>(null);
   const [showGameFrame, setShowGameFrame] = useState(false);
+  const [stakeAmount, setStakeAmount] = useState(10);
+  const [stakeLoading, setStakeLoading] = useState(false);
+  const [transactionHash, setTransactionHash] = useState<string | null>(null);
+  const [playerName, setPlayerName] = useState('');
+  const [roomId, setRoomId] = useState('');
+  const [tokenBalance, setTokenBalance] = useState('0');
+  const [stakeInfo, setStakeInfo] = useState<{ tokensStaked: string; rewards: string } | null>(null);
+  const [loadingInfo, setLoadingInfo] = useState(false);
+  const [claiming, setClaiming] = useState(false);
+  const [claimSuccess, setClaimSuccess] = useState(false);
 
 
   // const [showSquadOptions, setShowSquadOptions] = useState(false);
@@ -119,9 +134,9 @@ export default function Home() {
     setSelectedMap((prev) => (prev - 1 + maps.length) % maps.length);
   };
 
-  const [playerName, setPlayerName] = useState('');
-  const [roomId, setRoomId] = useState('');
-
+  const handleStakePopup = () => {
+    setShowStakePopup(true);
+  }
   const handleOpenStartPopup = () => {
     setShowStartPopup(true);
   };
@@ -138,7 +153,75 @@ export default function Home() {
   const handleCloseGameFrame = () => {
     setShowGameFrame(false);
   };
-  
+
+  const handleStaking = async (stakeAmount: number) => {
+    setStakeLoading(true);
+    try {
+      const result = await STAKE_STARKSHOOT({ amount: stakeAmount });
+      console.log("Staking successful:", result);
+      const hash = result?.hash;
+      if (hash) {
+        setTransactionHash(hash);
+        console.log("Transaction Hash:", hash);
+      }
+      setShowStakePopup(false);
+      handleOpenStartPopup();
+    } catch (error) {
+      console.error("Staking failed:", error);
+    } finally {
+      setStakeLoading(false);
+    }
+  }
+  const account = useAccount();
+
+  const fetchStakeInfo = async () => {
+    setLoadingInfo(true);
+    try {
+      if (account?.address) {
+        const result = await GET_STAKE_INFO(account?.address);
+        setStakeInfo(result || null);
+      }
+    } catch (error) {
+      console.error("Error fetching stake info", error);
+    } finally {
+      setLoadingInfo(false);
+    }
+  };
+
+  const claimReward = async () => {
+    setClaiming(true);
+    try {
+      const result = await CLAIM_REWARDS();
+      console.log("Claim rewards result",result);
+      setClaimSuccess(true);
+      // Refresh info after claim
+      await fetchStakeInfo();
+    } catch (error) {
+      console.error("Error claiming rewards", error);
+    } finally {
+      setClaiming(false);
+    }
+  };
+
+  const fetchEStkBalance = async () => {
+    if (account?.address) {
+      const result = await FETCHESTK_BALANCE(account.address);
+      setTokenBalance(result || '0');
+    }
+  }
+
+  useEffect(() => {
+    if (account?.address) {
+      fetchEStkBalance();
+    }
+  }, [account?.address]);
+
+  useEffect(() => {
+    if (showClaimPopup && account?.address) {
+      fetchStakeInfo();
+      setClaimSuccess(false);
+    }
+  }, [showClaimPopup, account?.address]);
 
 
   return (
@@ -179,6 +262,15 @@ export default function Home() {
             <div className="absolute flex flex-col items-center justify-center">
               <Image src={Gear} alt="Gear Icon" width={30} height={30} className="align-middle" />
               <span className="text-yellow-400 font-bold text-xs text-center relative bottom-2 mt-2">GEAR</span>
+            </div>
+          </div>
+          <div className="relative flex flex-col items-center justify-center -mt-1 hover:cursor-pointer hover:scale-105 transition duration-300"
+            onClick={() => setShowClaimPopup(true)}
+            >
+            <Image src={BtnTemp} alt="Button Template" width={60} height={60} className="align-middle" />
+            <div className="absolute flex flex-col items-center justify-center">
+              <FaAward className='text-2xl text-red-700' />
+              <span className="text-yellow-400 font-bold text-xs text-center relative bottom-2 mt-2">CLAIM</span>
             </div>
           </div>
           <div className="relative z-50">
@@ -390,7 +482,7 @@ export default function Home() {
         {/* Fixed bottom-right button container with increased spacing */}
         <div className="fixed bottom-8 right-8 flex flex-col gap-6 items-end w-auto z-20">  
           <div className='hover:cursor-pointer hover:scale-105 transition duration-300'
-            onClick={handleOpenStartPopup}
+            onClick={handleStakePopup}
             >
             <Image
               src={Playbtn}
@@ -403,6 +495,185 @@ export default function Home() {
           </div>
         </div>
       </main>
+
+      {showClaimPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Background Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black via-black/80 to-black opacity-90 z-40" />
+
+          {/* Modal Window */}
+          <div className="relative z-50 bg-[#343B50] border-2 border-white rounded-2xl max-w-2xl w-full max-h-[90vh] px-6 py-8 text-white">
+            {/* Close Button */}
+            <button
+              className="absolute top-2 right-2 hover:cursor-pointer"
+              onClick={() => setShowClaimPopup(false)}
+            >
+              <Image src={Close} alt="Close" width={30} height={30} />
+            </button>
+
+            {/* Header */}
+            <h2
+              className="text-3xl font-bold text-center mb-4"
+              style={{
+                textShadow: "1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000",
+              }}
+            >
+              REWARD
+            </h2>
+
+            <hr className="w-full border-t-2 border-white mb-4" />
+
+            {/* Content */}
+            {loadingInfo ? (
+              <p className="text-center text-lg">Fetching rewards...</p>
+            ) : stakeInfo ? (
+              <div className="text-center space-y-4">
+                <div>
+                  <p className="text-lg">Tokens Staked:</p>
+                  <p className="text-2xl font-semibold">{stakeInfo.tokensStaked} ESTK</p>
+                </div>
+                <div>
+                  <p className="text-lg">Unclaimed Rewards:</p>
+                  <p className="text-2xl font-semibold">{stakeInfo.rewards} STK</p>
+                </div>
+
+                {claimSuccess && (
+                  <p className="text-green-400 font-medium mt-2">✅ Rewards claimed successfully!</p>
+                )}
+
+                <button
+                  onClick={claimReward}
+                  disabled={claiming}
+                  className={`mt-6 px-6 py-2 text-lg rounded-lg bg-yellow-400 text-black font-bold hover:bg-yellow-300 transition ${
+                    claiming ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                >
+                  {claiming ? "Claiming..." : "Claim Rewards"}
+                </button>
+              </div>
+            ) : (
+              <p className="text-center text-red-400">No stake info found.</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {showStakePopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        {/* Background Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black via-black/80 to-black opacity-90 z-40"></div>
+
+        {/* Modal Window */}
+        <div className="relative z-50 bg-[#343B50] border-2 border-white rounded-2xl max-w-2xl w-full max-h-[90vh]">
+          {/* Close Button */}
+          <button
+            className="absolute top-1 -right-3 hover:cursor-pointer"
+            onClick={() => setShowStakePopup(false)}
+          >
+            <Image src={Close} alt="Close" width={60} height={60} />
+          </button>
+
+          {/* Header */}
+          <h2 className="text-2xl font-bold text-white my-3 text-center"
+            style={{ 
+              textShadow: "1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000",
+            }}>
+            STAKE
+          </h2>
+          <hr className="w-full border-t-2" />
+
+          {/* Content */}
+          <div className="p-8 flex flex-col gap-6">
+            {/* Custom stake amount field */}
+            <div className="text-white text-md font-medium tracking-wide">
+              Balance: <span className="text-yellow-400">{parseFloat(tokenBalance).toFixed(4)} ESTK</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-white text-2xl font-bold tracking-wider pl-1"
+                    style={{ 
+                      textShadow: "1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000",
+                    }}>
+                Custom Amount
+              </label>
+              <input
+                type="number"
+                placeholder="Enter custom amount"
+                min="10"
+                value={stakeAmount}
+                onChange={(e) => setStakeAmount(Number(e.target.value))}
+                className="w-full px-4 py-3 rounded-lg bg-white text-gray-700 text-lg border-2 border-gray-300 focus:outline-none"
+              />
+              <button
+                onClick={() => setStakeAmount(Number(parseFloat(tokenBalance).toFixed(4)))}
+                className="bg-yellow-400 px-4 rounded-lg text-black font-semibold hover:bg-yellow-300 transition"
+              >
+                MAX
+              </button>
+            </div>
+            
+            {/* Preset amounts - first row */}
+            <div className="flex flex-col gap-2">
+              <label className="text-white text-xl font-bold tracking-wider pl-1"
+                    style={{ 
+                      textShadow: "1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000",
+                    }}>
+                Quick Select
+              </label>
+              <div className="flex gap-4 w-full">
+                {[10, 15, 20].map((amount) => (
+                  <button 
+                    key={amount}
+                    onClick={() => setStakeAmount(amount)}
+                    className={`flex-1 py-3 px-2 rounded-lg font-bold text-lg transition-all hover:cursor-pointer ${
+                      stakeAmount === amount
+                        ? 'bg-yellow-400 text-gray-900 border-2 border-yellow-600' 
+                        : 'bg-gray-700 text-white hover:bg-gray-600'
+                    }`}
+                  >
+                    {amount} STK
+                  </button>
+                ))}
+              </div>
+              
+              {/* Preset amounts - second row */}
+              <div className="flex gap-4 w-full mt-2">
+                <button 
+                  onClick={() => setStakeAmount(50)}
+                  className={`flex-1 py-3 px-2 rounded-lg font-bold text-lg transition-all hover:cursor-pointer ${
+                    stakeAmount === 50
+                      ? 'bg-yellow-400 text-gray-900 border-2 border-yellow-600' 
+                      : 'bg-gray-700 text-white hover:bg-gray-600'
+                  }`}
+                >
+                  50 STK
+                </button>
+              </div>
+            </div>
+            
+            {/* Stake button */}
+            <button
+              onClick={() => handleStaking(stakeAmount)}
+              className={`relative py-3 flex items-center justify-center mt-4 hover:cursor-pointer ${
+                stakeLoading ? "opacity-60 cursor-not-allowed" : ""
+              }`}
+              disabled={stakeLoading}
+              style={{ filter: "drop-shadow(0 4px 0 rgba(0,0,0,0.5))" }}
+            >
+              <div className="absolute inset-0 bg-yellow-400 rounded-lg border-b-4 border-yellow-600"></div>
+              <span
+                className="relative z-10 text-xl font-bold tracking-wider"
+                style={{
+                  textShadow:
+                    "1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000",
+                }}
+              >
+                {stakeLoading ? "Staking..." : "Stake"}
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+      )}
 
       {showStartPopup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -494,6 +765,27 @@ export default function Home() {
                   </span>
                 </button>
               </div>
+              {transactionHash && (
+                <div className="bg-gray-800 rounded-lg p-4 text-white text-sm flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-4">
+                  <span className="font-semibold">Transaction:</span>
+                  <a
+                    href={`https://base-sepolia.blockscout.com/tx/${transactionHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-yellow-300 hover:underline break-all"
+                  >
+                    {`${transactionHash.slice(0, 6)}...${transactionHash.slice(-6)}`}
+                  </a>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(transactionHash);
+                    }}
+                    className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-2 py-1 rounded-md text-xs"
+                  >
+                    Copy
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
