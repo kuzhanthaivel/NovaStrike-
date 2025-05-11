@@ -3,8 +3,27 @@ import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import BtnTemp from '../assets/btn-template.svg';
 import { IoIosWallet } from "react-icons/io";
+import { BACKEND_URL } from '@/lib/constant';
 
-export const CustomWallet = () => {
+interface UserData {
+    _id: string,
+    walletAddress: string,
+    __v: number,
+    isStaked: boolean,
+    kills: number,
+    score: number,
+    username: string
+}
+
+export const CustomWallet = ({
+  setShowModal,
+  setPendingWalletAddress,
+  setFetchedUserData
+}: {
+  setShowModal: (value: boolean) => void;
+  setPendingWalletAddress: (address: string | null) => void;
+  setFetchedUserData: (data: UserData | null) => void;
+}) => {
   // Track connection status in component state
   const [isWalletConnected, setIsWalletConnected] = useState<boolean>(false);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
@@ -23,8 +42,37 @@ export const CustomWallet = () => {
       localStorage.setItem('walletAddress', walletAddress);
     } else if (!isWalletConnected && localStorage.getItem('walletAddress')) {
       localStorage.removeItem('walletAddress');
+      setFetchedUserData(null)
     }
-  }, [isWalletConnected, walletAddress]);
+  }, [isWalletConnected, walletAddress, setFetchedUserData]);
+
+  useEffect(() => {
+    const checkAndSetupUser = async () => {
+      if (!walletAddress) return;
+
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/user/${walletAddress}`);
+
+        if (response.status === 404) {
+          // Show modal instead of prompt
+          setPendingWalletAddress(walletAddress);
+          setShowModal(true);
+        } else if (response.ok) {
+          const data = await response.json();
+          setFetchedUserData(data);
+          console.log("👤 User exists:", data);
+        } else {
+          console.error("❌ Unexpected error:", await response.text());
+        }
+      } catch (error) {
+        console.error("❌ Error checking/setting up user:", error);
+      }
+    };
+
+    if (isWalletConnected) {
+      checkAndSetupUser();
+    }
+  }, [walletAddress, isWalletConnected]);
 
   return (
     <ConnectButton.Custom>

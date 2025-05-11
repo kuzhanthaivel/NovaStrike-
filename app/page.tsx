@@ -34,6 +34,8 @@ import { CustomWallet } from './components/Wallet';
 import SimpleGameFrame from './components/iframe';
 import { CLAIM_REWARDS, FETCHESTK_BALANCE, GET_STAKE_INFO, STAKE_STARKSHOOT } from '@/contract/integration/integration';
 import { useAccount } from 'wagmi';
+import { BACKEND_URL } from '@/lib/constant';
+import { FaHistory } from "react-icons/fa";
 
 // Add interface for Popup props
 // interface PopupProps {
@@ -41,6 +43,34 @@ import { useAccount } from 'wagmi';
 //   onClose: () => void;
 //   children: ReactNode;
 // }
+
+interface UserData {
+    _id: string,
+    walletAddress: string,
+    __v: number,
+    isStaked: boolean,
+    kills: number,
+    score: number,
+    username: string
+}
+
+interface StakeData {
+  _id: string;
+  walletAddress: string;
+  amount: number;
+  timestamp: string;
+  __v: number;
+}
+
+export interface UserInfo {
+  walletAddress: string;
+  username: string;
+}
+
+export interface RoomHistory {
+  roomId: string;
+  users: UserInfo[];
+}
 
 export default function Home() {
   const [selectedCharacter, setSelectedCharacter] = useState(0);
@@ -63,11 +93,16 @@ export default function Home() {
   const [loadingInfo, setLoadingInfo] = useState(false);
   const [claiming, setClaiming] = useState(false);
   const [claimSuccess, setClaimSuccess] = useState(false);
-
-
-  // const [showSquadOptions, setShowSquadOptions] = useState(false);
-  // const [playerName, setPlayerName] = useState('');
-  // const [roomId, setRoomId] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [userNameInput, setUserNameInput] = useState('');
+  const [pendingWalletAddress, setPendingWalletAddress] = useState('');
+  const [fetchedUserData, setFetchedUserData] = useState<UserData | null>(null);
+  const [activeTab, setActiveTab] = useState<"reward" | "stake">("reward");
+  const [stakeHistory, setStakeHistory] = useState<StakeData[] | null>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [showHistoryPopup, setShowHistoryPopup] = useState(false);
+  const [historyData, setHistoryData] = useState<RoomHistory[]>([]);
+  const [loading, setLoading] = useState(true);
 
 
   const characters = [
@@ -145,10 +180,35 @@ export default function Home() {
     setShowStartPopup(false);
   };
 
-  const handleStartGame = () => {
-    setShowStartPopup(false);
-    setShowGameFrame(true);
-  };
+  const handleStartGame = async () => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/room/join`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          roomId: roomId,
+          walletAddress: account?.address
+        })
+      });
+  
+      const result = await response.json();
+  
+      if (!response.ok) {
+        console.error("Failed to join room:", result);
+        return;
+      }
+  
+      console.log("Successfully joined room:", result);
+
+      setShowStartPopup(false);
+      setShowGameFrame(true);
+      
+    } catch (error) {
+      console.error("Error joining room:", error);
+    }
+  };  
   
   const handleCloseGameFrame = () => {
     setShowGameFrame(false);
@@ -156,6 +216,7 @@ export default function Home() {
 
   const handleStaking = async (stakeAmount: number) => {
     setStakeLoading(true);
+    const walletAddress = account?.address;
     try {
       const result = await STAKE_STARKSHOOT({ amount: stakeAmount });
       console.log("Staking successful:", result);
@@ -163,6 +224,22 @@ export default function Home() {
       if (hash) {
         setTransactionHash(hash);
         console.log("Transaction Hash:", hash);
+      }
+      const historyRes = await fetch(`${BACKEND_URL}/api/stake/history/add`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          walletAddress,
+          amount: stakeAmount,
+        }),
+      });
+
+      if (!historyRes.ok) {
+        console.error("❌ Failed to log stake history:", await historyRes.text());
+      } else {
+        console.log("📄 Stake history added successfully.");
       }
       setShowStakePopup(false);
       handleOpenStartPopup();
@@ -172,6 +249,7 @@ export default function Home() {
       setStakeLoading(false);
     }
   }
+
   const account = useAccount();
 
   const fetchStakeInfo = async () => {
@@ -223,6 +301,79 @@ export default function Home() {
     }
   }, [showClaimPopup, account?.address]);
 
+  const handleUserSubmit = async () => {
+      if (!userNameInput || !pendingWalletAddress) return;
+  
+      try {
+        const setupRes = await fetch(`${BACKEND_URL}/api/user/setup`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            walletAddress: pendingWalletAddress,
+            username: userNameInput,
+          }),
+        });
+  
+        if (setupRes.ok) {
+          console.log("✅ User setup complete.");
+          setShowModal(false);
+          setUserNameInput('');
+        } else {
+          console.error("❌ Failed to create user:", await setupRes.text());
+        }
+      } catch (error) {
+        console.error("❌ Error setting up user:", error);
+      }
+    };
+
+    useEffect(() => {
+      const fetchStakeHistory = async () => {
+        if (activeTab === "stake" && account?.address) {
+          setLoadingHistory(true);
+          try {
+            const res = await fetch(`${BACKEND_URL}/api/stake/history/${account?.address}`);
+            const data = await res.json();
+            console.log("Stake history response:", data);
+            setStakeHistory(Array.isArray(data) ? data : []);
+          } catch (err) {
+            console.error("Failed to fetch stake history:", err);
+            setStakeHistory([]);
+          } finally {
+            setLoadingHistory(false);
+          }
+        }
+      };
+    
+      fetchStakeHistory();
+    }, [activeTab, account?.address]);
+    
+    const handleCloseHistoryPopup = () => {
+      setShowHistoryPopup(false);
+    };
+    
+    useEffect(() => {
+      if (showHistoryPopup) {
+        setLoading(true);
+        fetch(`${BACKEND_URL}/api/user/rooms-played/${account?.address}`)
+          .then(res => res.json())
+          .then(data => {
+            console.log("Fetched history data:", data); // See the actual data
+            if (Array.isArray(data)) {
+              setHistoryData(data);
+            } else {
+              console.error("Invalid data format, expected array:", data);
+              setHistoryData([]); // fallback to empty array
+            }
+            setLoading(false);
+          })
+          .catch(err => {
+            console.error("Error fetching history:", err);
+            setLoading(false);
+          });
+      }
+    }, [showHistoryPopup]);
 
   return (
     <div className="min-h-screen font-Ghibli bg-[url('/images/bgimage.svg')] bg-cover bg-center text-white font-sans flex flex-col relative overflow-x-hidden overflow-y-auto" style={{ fontFamily: 'GamePaused' }}>
@@ -265,6 +416,14 @@ export default function Home() {
             </div>
           </div>
           <div className="relative flex flex-col items-center justify-center -mt-1 hover:cursor-pointer hover:scale-105 transition duration-300"
+            onClick={() => setShowHistoryPopup(true)}>
+            <Image src={BtnTemp} alt="Button Template" width={60} height={60} className="align-middle" />
+            <div className="absolute flex flex-col items-center justify-center">
+              <FaHistory className='text-2xl text-white'/>
+              <span className="text-yellow-400 font-bold text-xs text-center relative bottom-2 mt-2">HISTORY</span>
+            </div>
+          </div>
+          <div className="relative flex flex-col items-center justify-center -mt-1 hover:cursor-pointer hover:scale-105 transition duration-300"
             onClick={() => setShowClaimPopup(true)}
             >
             <Image src={BtnTemp} alt="Button Template" width={60} height={60} className="align-middle" />
@@ -274,7 +433,7 @@ export default function Home() {
             </div>
           </div>
           <div className="relative z-50">
-            <CustomWallet />
+            <CustomWallet setShowModal={setShowModal} setPendingWalletAddress={(address: string | null) => setPendingWalletAddress(address || '')} setFetchedUserData={setFetchedUserData} />
           </div>
         </div>
       </header>
@@ -286,25 +445,32 @@ export default function Home() {
           {/* Left Side - Character */}
           <div className="relative w-1/2 bottom-20 flex flex-col items-center justify-center">
             <div className="flex flex-col items-center">
+              {/* Status */}
               <div className='relative w-80 h-20 top-12 right-10 z-10'>
-                <p className='relative top-6 left-12 text-base font-bold'>ONLINE</p>
+                <p className='relative top-6 left-12 text-base font-bold'>
+                  {fetchedUserData ? 'ONLINE' : 'OFFLINE'}
+                </p>
                 <Image src={PlayerStatus} alt="Player Status" className="mb-4" />
               </div>
-              <p className='relative top-6 right-36 text-black text-base font-bold z-10'>@username</p>
-              {/* Container for arrows and image */}
+
+              {/* Username */}
+              <p className='relative top-6 right-36 text-black text-base font-bold z-10'>
+                @{fetchedUserData ? fetchedUserData?.username : 'john doe'}
+              </p>
+
+              {/* Character Container */}
               <div className="relative w-80 h-[500px] cursor-pointer">
+                
                 {/* Left Arrow */}
                 <Image
                   src={ArrowLeft}
                   alt="Arrow Left"
                   onClick={handlePreviousCharacter}
-                  className="absolute left-[-50px] top-1/2 transform -translate-y-1/2 z-10 transition duration-300 hover:scale-110"
+                  className="absolute left-[-50px] top-1/2 transform -translate-y-1/2 z-20 transition duration-300 hover:scale-110"
                 />
 
                 {/* Character Image */}
-                <div
-                  className="relative w-full h-full transform hover:scale-105 transition duration-300" 
-                >
+                <div className="relative w-full h-full transform hover:scale-105 transition duration-300">
                   <Image
                     src={characters[selectedCharacter].image}
                     alt="Character"
@@ -312,31 +478,45 @@ export default function Home() {
                     layout="fill"
                     objectFit="cover"
                   />
+
+                  {/* Coming Soon Overlay */}
+                  {selectedCharacter !== 0 && selectedCharacter <= 3 && (
+                    <div className="absolute inset-0 bg-black opacity-80 flex items-center justify-center z-30 rounded-lg">
+                      <p className="text-white text-3xl font-bold">Coming Soon</p>
+                    </div>
+                  )}
                 </div>
-                <div className="flex justify-center gap-1 mt-1">
-                    {Array.from({ length: 5 }).map((_, index) => (
-                      <Image
-                        key={index}
-                        src={Star}
-                        alt="star"
-                        className={index < characters[selectedCharacter].difficulty ? 'opacity-100' : 'opacity-30'}
-                        width={20}
-                        height={20}
-                      />
-                    ))}
-                  </div>
-                <h2 className="text-2xl font-bold text-yellow-400 mb-1 text-center">
-                  {characters[selectedCharacter].name} | Lv. {characters[selectedCharacter].difficulty}
-                </h2>
-                <h2 className='text-xl font-bold text-yellow-400 text-center'>
-                  Specialist: {characters[selectedCharacter].special}
-                </h2>
+
+                {/* Show info only if selectedCharacter === 0 */}
+                {selectedCharacter === 0 && (
+                  <>
+                    <div className="flex justify-center gap-1 mt-2 z-20">
+                      {Array.from({ length: 5 }).map((_, index) => (
+                        <Image
+                          key={index}
+                          src={Star}
+                          alt="star"
+                          className={index < characters[selectedCharacter].difficulty ? 'opacity-100' : 'opacity-30'}
+                          width={20}
+                          height={20}
+                        />
+                      ))}
+                    </div>
+                    <h2 className="text-2xl font-bold text-yellow-400 mb-1 text-center z-20">
+                      {characters[selectedCharacter].name} | Lv. {characters[selectedCharacter].difficulty}
+                    </h2>
+                    <h2 className='text-xl font-bold text-yellow-400 text-center z-20'>
+                      Specialist: {characters[selectedCharacter].special}
+                    </h2>
+                  </>
+                )}
+
                 {/* Right Arrow */}
                 <Image
                   src={ArrowRight}
                   alt="Arrow Right"
                   onClick={handleNextCharacter}
-                  className="absolute right-[-50px] top-1/2 transform -translate-y-1/2 z-10 transition duration-300 hover:scale-110"
+                  className="absolute right-[-50px] top-1/2 transform -translate-y-1/2 z-20 transition duration-300 hover:scale-110"
                 />
               </div>
             </div>
@@ -356,25 +536,34 @@ export default function Home() {
                   className="w-full h-full object-cover"
                 />
 
-                {/* Gradient Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent"></div>
-
-                {/* Map Info */}
-                <div className="absolute bottom-4 left-0 right-0 px-3 text-center z-10">
-                  <div className="flex justify-center gap-1 mt-1">
-                    {Array.from({ length: 5 }).map((_, index) => (
-                      <Image
-                        key={index}
-                        src={Star}
-                        alt="star"
-                        className={index < maps[selectedMap].difficulty ? 'opacity-100' : 'opacity-30'}
-                        width={20}
-                        height={20}
-                      />
-                    ))}
+                {/* Transparent Gradient Overlay for Coming Soon */}
+                {selectedMap !== 0 && selectedMap <= 3 && (
+                  <div className="absolute inset-0 bg-black opacity-80 flex items-center justify-center z-20">
+                    <p className="text-white text-3xl font-bold">Coming Soon</p>
                   </div>
-                  <p className="font-bold text-xl text-yellow-400">{maps[selectedMap].name}</p>
-                </div>
+                )}
+
+                {/* Gradient Overlay (for normal display and bottom fade effect) */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent z-10"></div>
+
+                {/* Map Info - only show if not coming soon */}
+                {selectedMap === 0 && (
+                  <div className="absolute bottom-4 left-0 right-0 px-3 text-center z-20">
+                    <div className="flex justify-center gap-1 mt-1">
+                      {Array.from({ length: 5 }).map((_, index) => (
+                        <Image
+                          key={index}
+                          src={Star}
+                          alt="star"
+                          className={index < maps[selectedMap].difficulty ? 'opacity-100' : 'opacity-30'}
+                          width={20}
+                          height={20}
+                        />
+                      ))}
+                    </div>
+                    <p className="font-bold text-xl text-yellow-400">{maps[selectedMap].name}</p>
+                  </div>
+                )}
 
                 {/* Left Arrow */}
                 <Image
@@ -384,7 +573,7 @@ export default function Home() {
                     e.stopPropagation();
                     handlePreviousMap();
                   }}
-                  className="absolute left-4 bottom-5 z-20 transition duration-300 hover:scale-110 cursor-pointer"
+                  className="absolute left-4 bottom-5 z-30 transition duration-300 hover:scale-110 cursor-pointer"
                 />
 
                 {/* Right Arrow */}
@@ -395,9 +584,10 @@ export default function Home() {
                     e.stopPropagation();
                     handleNextMap();
                   }}
-                  className="absolute right-4 bottom-5 z-20 transition duration-300 hover:scale-110 cursor-pointer"
+                  className="absolute right-4 bottom-5 z-30 transition duration-300 hover:scale-110 cursor-pointer"
                 />
               </div>
+
 
               {/* Yellow Bar Below */}
               <div className="h-6 w-full bg-[#FDBD1F] rounded-b-lg -mt-1"></div>
@@ -502,13 +692,13 @@ export default function Home() {
           <div className="absolute inset-0 bg-gradient-to-b from-black via-black/80 to-black opacity-90 z-40" />
 
           {/* Modal Window */}
-          <div className="relative z-50 bg-[#343B50] border-2 border-white rounded-2xl max-w-2xl w-full max-h-[90vh] px-6 py-8 text-white">
+          <div className="relative z-50 bg-[#343B50] border-2 border-white rounded-2xl max-w-2xl w-full max-h-[90vh] px-6 py-8 text-white overflow-auto">
             {/* Close Button */}
             <button
               className="absolute top-2 right-2 hover:cursor-pointer"
               onClick={() => setShowClaimPopup(false)}
             >
-              <Image src={Close} alt="Close" width={30} height={30} />
+              <Image src={Close} alt="Close" width={60} height={60} />
             </button>
 
             {/* Header */}
@@ -523,37 +713,124 @@ export default function Home() {
 
             <hr className="w-full border-t-2 border-white mb-4" />
 
+            {/* Tabs */}
+            <div className="flex justify-center gap-4 mb-6">
+              <button
+                onClick={() => setActiveTab("reward")}
+                className={`px-4 py-2 rounded-lg font-semibold ${
+                  activeTab === "reward" ? "bg-white text-black" : "bg-transparent border border-white"
+                }`}
+              >
+                Reward
+              </button>
+              <button
+                onClick={() => setActiveTab("stake")}
+                className={`px-4 py-2 rounded-lg font-semibold ${
+                  activeTab === "stake" ? "bg-white text-black" : "bg-transparent border border-white"
+                }`}
+              >
+                Stake
+              </button>
+            </div>
+
             {/* Content */}
-            {loadingInfo ? (
-              <p className="text-center text-lg">Fetching rewards...</p>
-            ) : stakeInfo ? (
-              <div className="text-center space-y-4">
-                <div>
-                  <p className="text-lg">Tokens Staked:</p>
-                  <p className="text-2xl font-semibold">{stakeInfo.tokensStaked} ESTK</p>
-                </div>
-                <div>
-                  <p className="text-lg">Unclaimed Rewards:</p>
-                  <p className="text-2xl font-semibold">{stakeInfo.rewards} STK</p>
-                </div>
+            {activeTab === "reward" ? (
+              loadingInfo ? (
+                <p className="text-center text-lg">Fetching rewards...</p>
+              ) : stakeInfo ? (
+                <div className="text-center space-y-4">
+                  <div>
+                    <p className="text-lg">Tokens Staked:</p>
+                    <p className="text-2xl font-semibold">{stakeInfo.tokensStaked} ESTK</p>
+                  </div>
+                  <div>
+                    <p className="text-lg">Unclaimed Rewards:</p>
+                    <p className="text-2xl font-semibold">{stakeInfo.rewards} STK</p>
+                  </div>
 
-                {claimSuccess && (
-                  <p className="text-green-400 font-medium mt-2">✅ Rewards claimed successfully!</p>
-                )}
+                  {claimSuccess && (
+                    <p className="text-green-400 font-medium mt-2">✅ Rewards claimed successfully!</p>
+                  )}
 
-                <button
-                  onClick={claimReward}
-                  disabled={claiming}
-                  className={`mt-6 px-6 py-2 text-lg rounded-lg bg-yellow-400 text-black font-bold hover:bg-yellow-300 transition ${
-                    claiming ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
-                >
-                  {claiming ? "Claiming..." : "Claim Rewards"}
-                </button>
-              </div>
+                  <button
+                    onClick={claimReward}
+                    disabled={claiming}
+                    className={`mt-6 px-6 py-2 text-lg rounded-lg bg-yellow-400 text-black font-bold hover:bg-yellow-300 transition ${
+                      claiming ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                  >
+                    {claiming ? "Claiming..." : "Claim Rewards"}
+                  </button>
+                </div>
+              ) : (
+                <p className="text-center text-red-400">No stake info found.</p>
+              )
             ) : (
-              <p className="text-center text-red-400">No stake info found.</p>
+              <div className="text-left space-y-4 max-h-[300px] overflow-y-auto">
+                {loadingHistory ? (
+                  <p className="text-center text-lg">Loading stake history...</p>
+                ) : stakeHistory && stakeHistory.length > 0 ? (
+                  stakeHistory.map((entry, index) => (
+                    <div key={index} className="border-b border-white pb-2">
+                      <p className="text-sm">Amount: <span className="font-semibold">{entry.amount} ESTK</span></p>
+                      <p className="text-sm">Time: <span className="font-light">{new Date(entry.timestamp).toLocaleString()}</span></p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-center text-red-400">No stake history found.</p>
+                )}
+              </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {showHistoryPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Background Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black via-black/80 to-black opacity-90 z-40"></div>
+
+          {/* Modal Window */}
+          <div className="relative z-50 bg-[#343B50] border-2 border-white rounded-2xl max-w-2xl w-full max-h-[90vh]">
+            {/* Close Button */}
+            <button
+              className="absolute top-1 -right-3 hover:cursor-pointer"
+              onClick={handleCloseHistoryPopup}
+            >
+              <Image src={Close} alt="Close" width={60} height={60} />
+            </button>
+
+            {/* Header */}
+            <h2 className="text-2xl font-bold text-white my-3 text-center"
+              style={{ 
+                textShadow: "1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000",
+              }}>
+              GAME HISTORY
+            </h2>
+            <hr className="w-full border-t-2" />
+
+            {/* Content */}
+            <div className="p-8 flex flex-col gap-6">
+              {loading ? (
+                <p className="text-white text-lg text-center">Loading...</p>
+              ) : historyData.length === 0 ? (
+                <p className="text-white text-lg text-center">No history found.</p>
+              ) : (
+                historyData.map((room, idx) => (
+                  <div key={idx} className="bg-gray-700 p-4 rounded-lg border border-white text-white">
+                    <p className="font-bold text-lg mb-2">Room ID: {room.roomId}</p>
+                    <div className="grid gap-2">
+                      {room.users.map((user, i) => (
+                        <div key={i} className="flex justify-between items-center bg-gray-800 p-2 rounded">
+                          <span className="font-medium">{user.username}</span>
+                          <span className="text-yellow-300 text-sm truncate max-w-[180px]">{user.walletAddress}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -673,6 +950,35 @@ export default function Home() {
           </div>
         </div>
       </div>
+      )}
+
+      {showModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white rounded-lg p-6 w-80 shadow-lg text-black">
+            <h2 className="text-lg font-semibold mb-4">Create a Username</h2>
+            <input
+              type="text"
+              className="w-full p-2 border rounded mb-4"
+              placeholder="Enter username"
+              value={userNameInput}
+              onChange={(e) => setUserNameInput(e.target.value)}
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                className="bg-gray-300 px-4 py-2 rounded"
+                onClick={() => setShowModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="bg-blue-600 text-white px-4 py-2 rounded"
+                onClick={handleUserSubmit}
+              >
+                Submit
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {showStartPopup && (
