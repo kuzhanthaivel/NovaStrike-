@@ -225,7 +225,7 @@ export default function Home() {
 
 
   return (
-    <div className="min-h-screen font-Ghibli bg-[url('/images/bgimage.svg')] bg-cover bg-center text-white font-sans flex flex-col relative overflow-x-hidden overflow-y-auto">
+    <div className="min-h-screen font-Ghibli bg-[url('/images/bgimage.svg')] bg-cover bg-center text-white font-sans flex flex-col relative overflow-x-hidden overflow-y-auto" style={{ fontFamily: 'GamePaused' }}>
 
       {/* Decorative Elements */}
       <div className="absolute inset-0 opacity-20 pointer-events-none">

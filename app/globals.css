@@ -13,8 +13,27 @@
     font-weight: 700;
     font-style: normal;
   }
+
+  @font-face {
+    font-family: 'GamePaused';
+    src: url('/fonts/GamepauseddemoRegular-RpmY6.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+  }
   
-  /* Set a default font globally (optional) */
+  @font-face {
+    font-family: 'SuperGame';
+    src: url('/fonts/Supergame-L3vxW.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+  }
+  
+  /* Apply globally */
+  :root {
+    --font-primary: 'GamePaused', sans-serif;
+    --font-secondary: 'SuperGame', sans-serif;
+  }
+  
   body {
-    font-family: 'Ghibli', sans-serif;
+    font-family: var(--font-primary);
   }
