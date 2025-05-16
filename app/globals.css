@@ -37,3 +37,33 @@
   body {
     font-family: var(--font-primary);
   }
+  .clip-corner {
+    position: relative;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(12px);
+    clip-path: polygon(
+      20px 0%,
+      100% 0%,
+      100% calc(100% - 20px),
+      calc(100% - 20px) 100%,
+      0% 100%,
+      0% 20px
+    );
+    z-index: 1;
+  }
+  
+  /* Glowing border as background with visible edge */
+  .clip-corner::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(#06b6d4, #06b6d4);
+    z-index: -1;
+    padding: 2px;
+    border-radius: 0; /* optional */
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+  }

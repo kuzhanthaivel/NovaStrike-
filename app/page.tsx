@@ -32,10 +32,11 @@ import { FaAward } from "react-icons/fa6";
 import Image from 'next/image';
 import { CustomWallet } from './components/Wallet';
 import SimpleGameFrame from './components/iframe';
-import { CLAIM_REWARDS, FETCHESTK_BALANCE, GET_STAKE_INFO, STAKE_STARKSHOOT } from '@/contract/integration/integration';
+import { CLAIM_REWARDS, FETCHESTK_BALANCE, GET_ALL_STAKE_INFO, STAKE_STARKSHOOT } from '@/contract/integration/integration';
 import { useAccount } from 'wagmi';
 import { BACKEND_URL } from '@/lib/constant';
 import { FaHistory } from "react-icons/fa";
+import RoomJoin from './components/RoomJoin';
 
 // Add interface for Popup props
 // interface PopupProps {
@@ -86,10 +87,10 @@ export default function Home() {
   const [stakeAmount, setStakeAmount] = useState(10);
   const [stakeLoading, setStakeLoading] = useState(false);
   const [transactionHash, setTransactionHash] = useState<string | null>(null);
-  const [playerName, setPlayerName] = useState('');
+  // const [playerName, setPlayerName] = useState('');
   const [roomId, setRoomId] = useState('');
   const [tokenBalance, setTokenBalance] = useState('0');
-  const [stakeInfo, setStakeInfo] = useState<{ tokensStaked: string; rewards: string } | null>(null);
+  const [stakeInfo, setStakeInfo] = useState<Array<{ matchId: string; staked: string; reward: string; isWinner: boolean; claimed: boolean }>>([]);
   const [loadingInfo, setLoadingInfo] = useState(false);
   const [claiming, setClaiming] = useState(false);
   const [claimSuccess, setClaimSuccess] = useState(false);
@@ -103,6 +104,9 @@ export default function Home() {
   const [showHistoryPopup, setShowHistoryPopup] = useState(false);
   const [historyData, setHistoryData] = useState<RoomHistory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [soldierName, setSoldierName] = useState("");
+  const [zoneCode, setZoneCode] = useState("Dolakpoor");
+  const [duration, setDuration] = useState("1 Min");
 
 
   const characters = [
@@ -242,7 +246,7 @@ export default function Home() {
         console.log("📄 Stake history added successfully.");
       }
       setShowStakePopup(false);
-      handleOpenStartPopup();
+      handleOpenStartPopup()
     } catch (error) {
       console.error("Staking failed:", error);
     } finally {
@@ -256,7 +260,8 @@ export default function Home() {
     setLoadingInfo(true);
     try {
       if (account?.address) {
-        const result = await GET_STAKE_INFO(account?.address);
+        const result = await GET_ALL_STAKE_INFO(account?.address);
+        console.log("Stake Info:", result);
         setStakeInfo(result || null);
       }
     } catch (error) {
@@ -266,10 +271,10 @@ export default function Home() {
     }
   };
 
-  const claimReward = async () => {
+  const claimReward = async (matchId: number) => {
     setClaiming(true);
     try {
-      const result = await CLAIM_REWARDS();
+      const result = await CLAIM_REWARDS(matchId);
       console.log("Claim rewards result",result);
       setClaimSuccess(true);
       // Refresh info after claim
@@ -376,7 +381,7 @@ export default function Home() {
     }, [showHistoryPopup]);
 
   return (
-    <div className="min-h-screen font-Ghibli bg-[url('/images/bgimage.svg')] bg-cover bg-center text-white font-sans flex flex-col relative overflow-x-hidden overflow-y-auto" style={{ fontFamily: 'GamePaused' }}>
+    <div className="min-h-screen font-Ghibli bg-[url('/images/bgimageFlight.jpeg')] bg-cover bg-center text-white font-sans flex flex-col relative overflow-x-hidden overflow-y-auto" style={{ fontFamily: 'GamePaused' }}>
 
       {/* Decorative Elements */}
       <div className="absolute inset-0 opacity-20 pointer-events-none">
@@ -737,33 +742,44 @@ export default function Home() {
             {activeTab === "reward" ? (
               loadingInfo ? (
                 <p className="text-center text-lg">Fetching rewards...</p>
-              ) : stakeInfo ? (
-                <div className="text-center space-y-4">
-                  <div>
-                    <p className="text-lg">Tokens Staked:</p>
-                    <p className="text-2xl font-semibold">{stakeInfo.tokensStaked} ESTK</p>
-                  </div>
-                  <div>
-                    <p className="text-lg">Unclaimed Rewards:</p>
-                    <p className="text-2xl font-semibold">{stakeInfo.rewards} STK</p>
-                  </div>
-
-                  {claimSuccess && (
-                    <p className="text-green-400 font-medium mt-2">✅ Rewards claimed successfully!</p>
-                  )}
-
-                  <button
-                    onClick={claimReward}
-                    disabled={claiming}
-                    className={`mt-6 px-6 py-2 text-lg rounded-lg bg-yellow-400 text-black font-bold hover:bg-yellow-300 transition ${
-                      claiming ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
-                  >
-                    {claiming ? "Claiming..." : "Claim Rewards"}
-                  </button>
+              ) : stakeInfo && stakeInfo.length > 0 ? (
+                <div className="space-y-6">
+                  {stakeInfo.map((reward, index) => (
+                    <div
+                      key={index}
+                      className="border border-white rounded-xl p-4 text-center space-y-2"
+                    >
+                      <p className="text-lg font-semibold">🏠 Room ID: {reward.matchId}</p>
+                      <p>💰 Tokens Staked: <span className="font-semibold">{reward.staked} ETH</span></p>
+                      <p>🎁 Reward: <span className="font-semibold">{reward.reward} STK</span></p>
+                      
+                      {reward.isWinner ? (
+                        reward.claimed ? (
+                          <button
+                            disabled
+                            className="mt-2 px-4 py-2 text-sm rounded-lg bg-gray-500 text-white font-semibold cursor-not-allowed"
+                          >
+                            ✅ Claimed
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => claimReward(Number(reward.matchId))}
+                            disabled={claiming}
+                            className={`mt-2 px-4 py-2 text-sm rounded-lg bg-yellow-400 text-black font-bold hover:bg-yellow-300 transition ${
+                              claiming ? "opacity-50 cursor-not-allowed" : ""
+                            }`}
+                          >
+                            {claiming ? "Claiming..." : "Claim Reward"}
+                          </button>
+                        )
+                      ) : (
+                        <p className="text-red-400 font-medium">❌ Not a winner</p>
+                      )}
+                    </div>
+                  ))}
                 </div>
               ) : (
-                <p className="text-center text-red-400">No stake info found.</p>
+                <p className="text-center text-red-400">No reward info found.</p>
               )
             ) : (
               <div className="text-left space-y-4 max-h-[300px] overflow-y-auto">
@@ -772,7 +788,7 @@ export default function Home() {
                 ) : stakeHistory && stakeHistory.length > 0 ? (
                   stakeHistory.map((entry, index) => (
                     <div key={index} className="border-b border-white pb-2">
-                      <p className="text-sm">Amount: <span className="font-semibold">{entry.amount} ESTK</span></p>
+                      <p className="text-sm">Amount: <span className="font-semibold">{entry.amount} ETH</span></p>
                       <p className="text-sm">Time: <span className="font-light">{new Date(entry.timestamp).toLocaleString()}</span></p>
                     </div>
                   ))
@@ -862,9 +878,9 @@ export default function Home() {
           {/* Content */}
           <div className="p-8 flex flex-col gap-6">
             {/* Custom stake amount field */}
-            <div className="text-white text-md font-medium tracking-wide">
+            {/* <div className="text-white text-md font-medium tracking-wide">
               Balance: <span className="text-yellow-400">{parseFloat(tokenBalance).toFixed(4)} ESTK</span>
-            </div>
+            </div> */}
             <div className="flex flex-col gap-1">
               <label className="text-white text-2xl font-bold tracking-wider pl-1"
                     style={{ 
@@ -982,119 +998,7 @@ export default function Home() {
       )}
 
       {showStartPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          {/* Background Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black via-black/80 to-black opacity-90 z-40"></div>
-
-          {/* Modal Window */}
-          <div className="relative z-50 bg-[#343B50] border-2 border-white rounded-2xl max-w-2xl w-full max-h-[90vh]">
-            {/* Close Button */}
-            <button
-              className="absolute top-1 -right-3 hover:cursor-pointer"
-              onClick={handleCloseStartPopup}
-            >
-              <Image src={Close} alt="Close" width={60} height={60} />
-            </button>
-
-            {/* Header */}
-            <h2 className="text-2xl font-bold text-white my-3 text-center"
-              style={{ 
-                textShadow: "1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000",
-              }}>
-              SQUAD SETUP
-            </h2>
-            <hr className="w-full border-t-2" />
-
-            {/* Content */}
-            <div className="p-8 flex flex-col gap-6">
-              {/* Player name field */}
-              <div className="flex flex-col gap-1">
-                <label className="text-white text-2xl font-bold tracking-wider pl-1"
-                      style={{ 
-                        textShadow: "1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000",
-                      }}>
-                  {selectedMode === "team" ? "Room Name" : "Player name"}
-                </label>
-                <input
-                  type="text"
-                  placeholder={selectedMode === "team" ? "eg. starkspace" : "eg. Deepakexe"}
-                  value={playerName}
-                  onChange={(e) => setPlayerName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg bg-white text-gray-700 text-lg border-2 border-gray-300 focus:outline-none"
-                />
-              </div>
-              
-              {/* Room ID field */}
-              <div className="flex flex-col gap-1">
-                <label className="text-white text-2xl font-bold tracking-wider pl-1"
-                      style={{ 
-                        textShadow: "1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000",
-                      }}>
-                  {selectedMode === "team" ? "Create Room ID" : "Room ID"}
-                </label>
-                <input
-                  type="text"
-                  placeholder="eg. 324225"
-                  value={roomId}
-                  onChange={(e) => setRoomId(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg bg-white text-gray-700 text-lg border-2 border-gray-300 focus:outline-none"
-                />
-              </div>
-              
-              {/* Buttons */}
-              <div className="grid grid-cols-2 gap-6 mt-4">
-                <button
-                  onClick={handleStartGame}
-                  className="relative py-3 flex items-center justify-center"
-                  style={{ filter: "drop-shadow(0 4px 0 rgba(0,0,0,0.5))" }}
-                >
-                  <div className="absolute inset-0 bg-yellow-400 rounded-lg border-b-4 border-yellow-600"></div>
-                  <span className="relative z-10 text-xl font-bold tracking-wider"
-                      style={{ 
-                        textShadow: "1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000",
-                      }}>
-                    Join Room
-                  </span>
-                </button>
-                
-                <button
-                  onClick={handleStartGame}
-                  className="relative py-3 flex items-center justify-center"
-                  style={{ filter: "drop-shadow(0 4px 0 rgba(0,0,0,0.5))" }}
-                >
-                  <div className="absolute inset-0 bg-yellow-400 rounded-lg border-b-4 border-yellow-600"></div>
-                  <span className="relative z-10 text-xl font-bold tracking-wider"
-                      style={{ 
-                        textShadow: "1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000",
-                      }}>
-                    Create Room
-                  </span>
-                </button>
-              </div>
-              {transactionHash && (
-                <div className="bg-gray-800 rounded-lg p-4 text-white text-sm flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-4">
-                  <span className="font-semibold">Transaction:</span>
-                  <a
-                    href={`https://base-sepolia.blockscout.com/tx/${transactionHash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-yellow-300 hover:underline break-all"
-                  >
-                    {`${transactionHash.slice(0, 6)}...${transactionHash.slice(-6)}`}
-                  </a>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(transactionHash);
-                    }}
-                    className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-2 py-1 rounded-md text-xs"
-                  >
-                    Copy
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <RoomJoin handleStartGame={handleStartGame} handleCloseStartPopup={handleCloseStartPopup} soldierName={soldierName} setSoldierName={setSoldierName}  zoneCode={zoneCode} setZoneCode={setZoneCode} duration={duration} setDuration={setDuration} />
       )}
 
       {/* Leaderboard Popup */}
