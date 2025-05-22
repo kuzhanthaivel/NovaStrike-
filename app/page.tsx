@@ -86,13 +86,16 @@ export default function Home() {
   const [showGameFrame, setShowGameFrame] = useState(false);
   const [stakeAmount, setStakeAmount] = useState(10);
   const [stakeLoading, setStakeLoading] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [transactionHash, setTransactionHash] = useState<string | null>(null);
   // const [playerName, setPlayerName] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [roomId, setRoomId] = useState('');
   const [tokenBalance, setTokenBalance] = useState('0');
   const [stakeInfo, setStakeInfo] = useState<Array<{ matchId: string; staked: string; reward: string; isWinner: boolean; claimed: boolean }>>([]);
   const [loadingInfo, setLoadingInfo] = useState(false);
   const [claiming, setClaiming] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [claimSuccess, setClaimSuccess] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [userNameInput, setUserNameInput] = useState('');
