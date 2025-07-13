@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Starkshoot',
+  title: 'NOVASTRIKE',
   description: 'Web3 powered app with RainbowKit and Wagmi',
 };
 
