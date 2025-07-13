@@ -395,7 +395,7 @@ export default function Home() {
 
       {/* Header */}
       <header className="flex justify-between items-center p-6 mx-10 relative z-10">
-        <h1 className="text-3xl font-bold text-yellow-400 drop-shadow-lg">BATTLEAWAY</h1>
+        <h1 className="text-3xl font-bold text-yellow-400 drop-shadow-lg">NOVASTRIKE</h1>
         <div className="flex gap-6 items-center">
           <div>
             <div className="flex items-center gap-2">
